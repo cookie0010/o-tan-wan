@@ -1,8 +1,5 @@
 import React from 'react';
-import fs from 'fs';
 import Image from 'next/image';
-import path from 'path';
-import { API_BASE_URL } from '@/client/components/post/PictureUploadButton';
 
 type Props = {
 	urlList: string[];
@@ -20,8 +17,7 @@ function RecentPictureList({ urlList }: Props) {
 						aspectRatio: '1/1',
 						objectFit: 'cover',
 						borderCollapse: 'collapse',
-						// border : '1px solid black',
-						padding : '0.5rem',
+						padding: '0.5rem',
 					}}
 					key={Math.random()}
 					src={url}

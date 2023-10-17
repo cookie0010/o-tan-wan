@@ -7,19 +7,9 @@ import useUserStore from '@/client/stores/userStore';
 import Image from 'next/image';
 import { useStore } from '@/client/hooks';
 import { useRouter } from 'next/navigation';
-
-type Req = {
-	data: FormData;
-};
-
-type Res = {
-	url: string;
-};
-
-export const API_BASE_URL =
-	process.env.NODE_ENV === 'production'
-		? '버셀 주소 입력'
-		: 'http://localhost:3000';
+import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
+import { storage } from '@/client/config/firebase';
+import { getTimeStamp } from '@/utils/time';
 
 export default function PictureUploadButton() {
 	const isLogin = useStore(useUserStore, (state) => state.isLogin);
@@ -28,6 +18,7 @@ export default function PictureUploadButton() {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const addUrl = useUserStore((state) => state.addUrl);
 	const router = useRouter();
+	const [isLoading, setIsLoading] = useState(false);
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
@@ -37,26 +28,34 @@ export default function PictureUploadButton() {
 			return;
 		}
 
-		const formData = new FormData();
-		formData.set('photo', file);
+		setIsLoading(true);
 
-		const response = await fetch(`${API_BASE_URL}/api/upload`, {
-			method: 'POST',
-			body: formData,
-		});
+		const imageRef = ref(storage, `images/${getTimeStamp()}_${file.name}`);
+		const uploadTask = uploadBytesResumable(imageRef, file);
 
-		const data = await response.json();
+		uploadTask.on(
+			'state_changed',
+			() => {},
+			() => {
+				alert('업로드에 실패했습니다.');
+				setIsLoading(false);
+			},
+			() => {
+				getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+					console.log('File available at', downloadURL);
+					addUrl(downloadURL);
+					setFile(null);
+					inputRef.current!.value = '';
 
-		addUrl(data.url);
-		setFile(null);
-		inputRef.current!.value = '';
-
-		if (previewUrl) {
-			URL.revokeObjectURL(previewUrl);
-			setPreviewUrl(null);
-		}
-
-		router.refresh();
+					if (previewUrl) {
+						URL.revokeObjectURL(previewUrl);
+						setPreviewUrl(null);
+					}
+					setIsLoading(false);
+					router.refresh();
+				});
+			},
+		);
 	};
 
 	if (!isLogin) return null;
@@ -106,7 +105,11 @@ export default function PictureUploadButton() {
 				type="file"
 				onChange={handleFileChange}
 			/>
-			{file && <Button type="submit">업로드</Button>}
+			{file && (
+				<Button type="submit" disabled={isLoading}>
+					{isLoading ? '업로드 중...' : '업로드'}
+				</Button>
+			)}
 		</form>
 	);
 }
