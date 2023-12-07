@@ -10,6 +10,9 @@ import { useRouter } from 'next/navigation';
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { storage } from '@/client/config/firebase';
 import { getTimeStamp } from '@/utils/time';
+import fetcher from '@/utils/api/fetcher';
+
+type EventType = 'reusableCup' | 'bicycle';
 
 export default function PictureUploadButton() {
 	const isLogin = useStore(useUserStore, (state) => state.isLogin);
@@ -19,6 +22,7 @@ export default function PictureUploadButton() {
 	const addUrl = useUserStore((state) => state.addUrl);
 	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(false);
+	const [eventType, setEventType] = useState('reusableCup');
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
@@ -32,30 +36,39 @@ export default function PictureUploadButton() {
 
 		const imageRef = ref(storage, `images/${getTimeStamp()}_${file.name}`);
 		const uploadTask = uploadBytesResumable(imageRef, file);
-
-		uploadTask.on(
-			'state_changed',
-			() => {},
-			() => {
-				alert('업로드에 실패했습니다.');
-				setIsLoading(false);
+		const validateResult = await fetcher(`{BASE_URL}/{eventType}`, {
+			method: 'POST',
+			body: {
+				url: addUrl,
 			},
-			() => {
-				getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-					console.log('File available at', downloadURL);
-					addUrl(downloadURL);
-					setFile(null);
-					inputRef.current!.value = '';
+		});
 
-					if (previewUrl) {
-						URL.revokeObjectURL(previewUrl);
-						setPreviewUrl(null);
-					}
-					setIsLoading(false);
-					router.refresh();
-				});
-			},
-		);
+		validateResult === true
+			? uploadTask.on(
+					'state_changed',
+					() => {},
+					() => {
+						alert('업로드에 실패했습니다.');
+						setIsLoading(false);
+					},
+					() => {
+						getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+							console.log('File available at', downloadURL);
+							addUrl(downloadURL);
+							setFile(null);
+							inputRef.current!.value = '';
+
+							if (previewUrl) {
+								URL.revokeObjectURL(previewUrl);
+								setPreviewUrl(null);
+							}
+
+							setIsLoading(false);
+							router.refresh();
+						});
+					},
+			  )
+			: alert('유효하지 않은 사진입니다.');
 	};
 
 	if (!isLogin) return null;
