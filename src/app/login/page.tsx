@@ -32,7 +32,11 @@ export default function LoginPage() {
 						</div>{' '}
 						<div className="flex flex-col space-y-1.5">
 							<Label htmlFor="name">비밀번호</Label>
-							<Input id="name" placeholder="비밀번호를 입력해주세요." />
+							<Input
+								id="name"
+								placeholder="비밀번호를 입력해주세요."
+								type="password"
+							/>
 						</div>
 						<Button
 							className="w-full"

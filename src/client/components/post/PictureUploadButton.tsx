@@ -2,17 +2,17 @@
 
 import { PlusCircleIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/client/components/ui';
-import { FormEvent, useRef, useState } from 'react';
+import React, { FormEvent, useRef, useState } from 'react';
 import useUserStore from '@/client/stores/userStore';
 import Image from 'next/image';
 import { useStore } from '@/client/hooks';
 import { useRouter } from 'next/navigation';
-import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
-import { storage } from '@/client/config/firebase';
 import { getTimeStamp } from '@/utils/time';
-import fetcher from '@/utils/api/fetcher';
-
-type EventType = 'reusableCup' | 'bicycle';
+import { EventType, ValidatedResult } from '@/types';
+import uploadPosts from '@/client/firebase/uploadPosts';
+import uploadImages from '@/client/firebase/uploadImages';
+import getValidateResult from '@/client/api/getValidateResult';
+import { validateType } from '@/client/constant/validateType';
 
 export default function PictureUploadButton() {
 	const isLogin = useStore(useUserStore, (state) => state.isLogin);
@@ -22,53 +22,43 @@ export default function PictureUploadButton() {
 	const addUrl = useUserStore((state) => state.addUrl);
 	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(false);
-	const [eventType, setEventType] = useState('reusableCup');
+	const [eventType, setEventType] = useState('reusableCup' as EventType);
 
 	const handleSubmit = async (e: FormEvent) => {
-		e.preventDefault();
+		try {
+			e.preventDefault();
+			if (!file) {
+				alert('업로드할 파일을 선택해주세요.');
+				return;
+			}
+			setIsLoading(true);
 
-		if (!file) {
-			alert('업로드할 파일을 선택해주세요.');
-			return;
+			const validatedResult: ValidatedResult = await getValidateResult(
+				file,
+				eventType,
+			);
+
+			const imgUrl = await uploadImages({
+				file,
+				url: `images/${getTimeStamp()}_${file.name}`,
+				addUrl,
+				previewUrl,
+				setFile,
+				inputRef,
+				setPreviewUrl,
+			});
+			router.refresh();
+
+			await uploadPosts({
+				userId: 'cookie0010@gmail.com',
+				imageUrl: imgUrl,
+				...validatedResult,
+			});
+
+			setIsLoading(false);
+		} catch (e) {
+			setIsLoading(false);
 		}
-
-		setIsLoading(true);
-
-		const imageRef = ref(storage, `images/${getTimeStamp()}_${file.name}`);
-		const uploadTask = uploadBytesResumable(imageRef, file);
-		const validateResult = await fetcher(`{BASE_URL}/{eventType}`, {
-			method: 'POST',
-			body: {
-				url: addUrl,
-			},
-		});
-
-		validateResult === true
-			? uploadTask.on(
-					'state_changed',
-					() => {},
-					() => {
-						alert('업로드에 실패했습니다.');
-						setIsLoading(false);
-					},
-					() => {
-						getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-							console.log('File available at', downloadURL);
-							addUrl(downloadURL);
-							setFile(null);
-							inputRef.current!.value = '';
-
-							if (previewUrl) {
-								URL.revokeObjectURL(previewUrl);
-								setPreviewUrl(null);
-							}
-
-							setIsLoading(false);
-							router.refresh();
-						});
-					},
-			  )
-			: alert('유효하지 않은 사진입니다.');
 	};
 
 	if (!isLogin) return null;
@@ -80,49 +70,66 @@ export default function PictureUploadButton() {
 		setPreviewUrl(url);
 		setFile(file);
 	};
+	const handleEventTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+		setEventType(e.target.value as EventType);
+	};
 
 	return (
-		<form onSubmit={handleSubmit} className="mx-auto flex flex-col gap-y-4">
-			{previewUrl ? (
-				<Image
-					src={previewUrl}
-					alt="사진 미리보기"
-					width={300}
-					height={300}
-					style={{
-						aspectRatio: '1/1',
-						objectFit: 'cover',
-					}}
-				/>
-			) : (
-				<Button
-					onClick={(e) => {
-						e.preventDefault();
-						inputRef.current?.click();
-					}}
-					asChild
-					variant="secondary"
-					className="w-fit p-10 cursor-pointer"
+		<div className="mx-auto felx flex-col">
+			<div className="mb-2 border-2 rounded-lg flex justify-end">
+				<select
+					id="eventType"
+					value={eventType}
+					onChange={handleEventTypeChange}
+					className="w-full p-1 bg-transparent outline-none"
 				>
-					<div className="flex flex-col h-fit">
-						<PlusCircleIcon className="w-10 h-10" />
-						<div className="mx-auto mt-4 text-lg font-semibold">
-							사진 업로드
+					{validateType.map((t) => (
+						<option value={t.value}>{t.label}</option>
+					))}
+				</select>
+			</div>
+			<form onSubmit={handleSubmit} className="mx-auto flex flex-col gap-y-4">
+				{previewUrl ? (
+					<Image
+						src={previewUrl}
+						alt="사진 미리보기"
+						width={300}
+						height={300}
+						style={{
+							aspectRatio: '1/1',
+							objectFit: 'cover',
+						}}
+					/>
+				) : (
+					<Button
+						onClick={(e) => {
+							e.preventDefault();
+							inputRef.current?.click();
+						}}
+						asChild
+						variant="secondary"
+						className="w-fit p-10 cursor-pointer"
+					>
+						<div className="flex flex-col h-fit">
+							<PlusCircleIcon className="w-10 h-10" />
+							<div className="mx-auto mt-4 text-lg font-semibold">
+								사진 업로드
+							</div>
 						</div>
-					</div>
-				</Button>
-			)}
-			<input
-				ref={inputRef}
-				className="hidden"
-				type="file"
-				onChange={handleFileChange}
-			/>
-			{file && (
-				<Button type="submit" disabled={isLoading}>
-					{isLoading ? '업로드 중...' : '업로드'}
-				</Button>
-			)}
-		</form>
+					</Button>
+				)}
+				<input
+					ref={inputRef}
+					className="hidden"
+					type="file"
+					onChange={handleFileChange}
+				/>
+				{file && (
+					<Button type="submit" disabled={isLoading}>
+						{isLoading ? '업로드 중...' : '업로드'}
+					</Button>
+				)}
+			</form>
+		</div>
 	);
 }

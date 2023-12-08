@@ -22,10 +22,10 @@ export default function Header() {
 					</Link>
 					<div className="ml-auto flex items-center gap-x-12">
 						<Link
-							href="/ESG"
+							href="/reward"
 							className="hover:bg-gray-200 font-bold text-lg cursor-pointer px-4 py-2 rounded"
 						>
-							ESG란 무엇인가?
+							Reward
 						</Link>
 						<UserAvatar />
 					</div>
