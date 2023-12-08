@@ -81,11 +81,15 @@ export default function PictureUploadButton() {
 					id="eventType"
 					value={eventType}
 					onChange={handleEventTypeChange}
-					className="w-full p-1 bg-transparent outline-none"
+					className="w-full pl-1 bg-transparent outline-none"
 				>
-					{validateType.map((t) => (
-						<option value={t.value}>{t.label}</option>
-					))}
+					{validateType.map((t) =>
+						t.activate ? (
+							<option value={t.value}>{t.label}</option>
+						) : (
+							<option value={t.value} className="bg-gray-400 text-white" >{t.label}</option>
+						),
+					)}
 				</select>
 			</div>
 			<form onSubmit={handleSubmit} className="mx-auto flex flex-col gap-y-4">

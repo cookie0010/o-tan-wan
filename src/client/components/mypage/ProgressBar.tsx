@@ -20,7 +20,7 @@ export default function ProgressBar() {
 			<h3 className="text-lg font-semibold">탄소 중립 기여도</h3>
 			<Progress value={progress} className="w-full" />
 			<div className="flex justify-between w-full">
-				{['0점', '5점', '10점', '15점'].map((item, index) => (
+				{['10점', '60점', '80점', '100점', '200점'].map((item, index) => (
 					<div
 						key={index}
 						className={clsx(

@@ -20,10 +20,16 @@ export default function Header() {
 							}}
 						/>
 					</Link>
-					<div className="ml-auto flex items-center gap-x-12">
+					<div className="ml-auto flex items-center gap-x-2">
+						<Link
+							href="/howToUse"
+							className="hover:bg-gray-200 font-bold text-lg cursor-pointer px-4 py-2 rounded"
+						>
+							이용 방법
+						</Link>
 						<Link
 							href="/reward"
-							className="hover:bg-gray-200 font-bold text-lg cursor-pointer px-4 py-2 rounded"
+							className="hover:bg-gray-200 font-bold text-lg cursor-pointer px-4 py-2 rounded mr-6 text-[#2083c5]"
 						>
 							Reward
 						</Link>
